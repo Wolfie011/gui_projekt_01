@@ -1,45 +1,38 @@
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.Scanner;
 
-public class s31774P01 {
+public class s31774P01 implements directoryCommand, edytor{
     public static void main(String[] args) {
 
         Scanner scanner = new Scanner(System.in);
-        // 0 - oznacza ze jestesmy w menu podstawowym w ktorym wybieramy modul
-        // 1.. czym glebiej i tak dalej
-        // komendy w zaleznosci jakie wybierzemy bedą zmieniac status czyli nasze połozenie w programie
-
         int statusCode = 0;
 
         Map<Integer, String> Status = new HashMap<>(){{
             put(0, "Main");
             put(10, "Menu edycji");
             put(20, "Menu sprawdzania");
-            put(11, "Dodawanie zadań");
-            put(12, "");
-            put(14, "Menu edycji");
         }};
 
-        List<File> folderList = new ArrayList<>() {{
-            add(new File("./src/Zadania"));
-            add(new File("./src/Zadania"));
+        List<String> folderList = new ArrayList<>() {{
+            add("./src/Zadania");
+            add("./src/Studenci");
         }};
 
         load(folderList);
 
         Map<String, Command> commandMapMain = new HashMap<>() {{
-            put("stop", new Command("stop", "Kończy cały program", 0));
-            put("edit", new Command("edit", "edytuje", 1));
+            put("stop", new CustomCommand("Kończy cały program", -1, edytor.brakeApp()));
+            put("edit", new CustomCommand("Moduł edycji", 10));
+            put("check", new CustomCommand("Moduł sprawdzania zadań", 20));
         }};
 
         Map<String, Command> commandMapEdit = new HashMap<>() {{
-            put("add", new Command("add", "Dodaje nowe zadanie", 0));
-            put("edit", new Command("edit", "edytuje", 1));
+            put("add", new CustomCommand("Dodaje nowe zadanie", 20, edytor.runEditor()));
+            put("edit", new CustomCommand( "Edytuje zadanie", 20));
+            put("back", new CustomCommand( "Powrót do menu głównego", 0));
         }};
 
         Map<Integer, Map<String, Command>> commandMap = new HashMap<>(){{
@@ -47,81 +40,134 @@ public class s31774P01 {
             put(10, commandMapEdit);
         }};
 
-        try {
-            File Zadania = new File("Zadania");
-            Zadania.createNewFile();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
         do {
             System.out.println("##########################################################################");
             System.out.println("Aktualna pozycja: " + Status.get(statusCode) + ", Aktualny status: " + statusCode);
-            for(Map.Entry<String, Command> entry : commandMapMain.entrySet()){
+
+            for(Map.Entry<String, Command> entry : commandMap.get(statusCode).entrySet()){
                 System.out.println(entry.getKey() + " " + entry.getValue().toString());
             }
+
             System.out.print("Podaj komende: ");
             String input = scanner.next();
-            if (input.equals("stop")){
-                break;
-            }
+
             Command command = commandMap.get(statusCode).get(input);
             if (command != null){
                 statusCode = command.StatusCode;
+                if (command.function != null) {
+                    command.function.run();
+                }
             }else {
                 System.out.println("Nieznana komenda.");
             }
         }while (true);
     }
 
-    public static void clearScreen() {
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
-    }
-
-    public static void load(List<File> files) {
-        for (File folder : files) {
-            if (!folder.exists()) {
-                boolean created = folder.mkdirs();
-                if (created) {
-                    System.out.println("Folder created successfully!");
-                } else {
-                    System.out.println("Failed to create folder.");
-                }
-            } else {
-                System.out.println("Folder already exists.");
-            }
+    public static void load(List<String> directories) {
+        for (String directory : directories) {
+            directoryCommand.createDirectory(directory);
         }
-
-//    public static void add() {
-//        try {
-//            File fZadania = new File("./src/Zadania");
-//            if (fZadania.createNewFile()) {
-//                System.out.println("Tworzenie folderu do zadań.. ");
-//            } else {
-//                System.out.println("Sprawdzanie folderów.. ");
-//            }
-//        } catch (IOException e) {
-//            System.out.println("An error occurred.");
-//            e.printStackTrace();
-//        }
-//    }
     }
-
-
 }
-class Command {
-    String commandName;
+abstract class Command {
     String commandDescription;
     int StatusCode;
+    Runnable function;
 
-    public Command(String commandName, String commandDescription, int StatusCode) {
+    public Command(String commandDescription, int StatusCode) {
         this.commandDescription = commandDescription;
-        this.commandName = commandName;
         this.StatusCode = StatusCode;
     }
+    public Command(String commandDescription, int StatusCode, Runnable function) {
+        this.commandDescription = commandDescription;
+        this.StatusCode = StatusCode;
+        this.function = function;
+    }
+
+    abstract void command();
     @Override
     public String toString() {
         return " - " + commandDescription + " [ StatusCode: " + StatusCode + " ]";
+    }
+}
+
+class CustomCommand extends Command {
+    public CustomCommand(String commandDescription, int StatusCode) {
+        super(commandDescription, StatusCode);
+    }
+    public CustomCommand(String commandDescription, int StatusCode, Runnable function) {
+        super(commandDescription, StatusCode, function);
+    }
+
+    @Override
+    void command() {
+        function.run();
+    }
+
+}
+
+interface directoryCommand {
+    static void createDirectory(String directoryName){
+        File folder = new File(directoryName);
+        if (!folder.exists()) {
+            boolean created = folder.mkdirs();
+            if (created) {
+                System.out.println("Folder created successfully!");
+            } else {
+                System.out.println("Failed to create folder.");
+            }
+        } else {
+            System.out.println("Folder already exists.");
+        }
+    }
+    static void createNewZadanie(String newZadanieName){
+        try {
+            // Create a File object
+            File myFile = new File("filename.txt");
+
+            // Use the createNewFile method to create the file
+            if (myFile.createNewFile()) {
+                System.out.println("File created: " + myFile.getName());
+            } else {
+                System.out.println("File already exists.");
+            }
+
+            // Create a FileWriter object
+            FileWriter myWriter = new FileWriter("filename.txt");
+
+            // Use the write method to write to the file
+            myWriter.write("Hello, world!");
+
+            // Always close the file writer
+            myWriter.close();
+
+            System.out.println("Successfully wrote to the file.");
+        } catch (IOException e) {
+            System.out.println("An error occurred.");
+            e.printStackTrace();
+        }
+    }
+}
+interface edytor{
+    static Runnable brakeApp() {
+        return () -> {
+            System.exit(0);
+        };
+    }
+
+    static Runnable runEditor() {
+        return () -> {
+            Scanner scanner = new Scanner(System.in);
+            String zadanieTresc = "";
+
+            do {
+                System.out.print("> ");
+                String input = scanner.next();
+                if (input.equals(">exit")) {
+                    break;
+                }
+                zadanieTresc += input;
+            } while (true);
+        };
     }
 }
