@@ -110,6 +110,48 @@ public class s31774P01 {
 
 
 }
+abstract class Task{
+    int taskNum;
+
+    public Task(int taskNum) {
+        this.taskNum = taskNum;
+    }
+
+    abstract void add();
+    abstract void show();
+}
+class theTask extends Task{
+    String taskName;
+    String taskContents;
+    String taskPhoto;
+    public theTask(int taskNum, String taskName, String taskContents, String taskPhoto) {
+        super(taskNum);
+        this.taskName = taskName;
+        this.taskContents = taskContents;
+        this.taskPhoto = taskPhoto;
+    }
+    @Override
+    void add() {
+    }
+    @Override
+    void show() {
+    }
+}
+class theSolution extends Task{
+    String soluition;
+    public theSolution(int taskNum, String soluition) {
+        super(taskNum);
+        this.soluition = soluition;
+    }
+    @Override
+    void add() {
+
+    }
+    @Override
+    void show() {
+
+    }
+}
 class Command {
     String commandName;
     String commandDescription;
