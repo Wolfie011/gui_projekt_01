@@ -1,12 +1,13 @@
-import java.io.File;
-import java.io.IOException;
+import com.sun.security.jgss.GSSUtil;
+
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.Scanner;
 
-public class s31774P01 implements directoryMethods, edtoryInterface{
+public class s31774P01 implements directoryMethods, editoryInterface{
     public static void main(String[] args) {
 
         Scanner scanner = new Scanner(System.in);
@@ -14,40 +15,42 @@ public class s31774P01 implements directoryMethods, edtoryInterface{
 
         Map<Integer, String> Status = new HashMap<>(){{
             put(0, "Main");
-            put(10, "Menu edycji");
-            put(11, "Dodawanie zadań");
-            put(12, "");
-            put(20, "Menu sprawdzania");
-            put(21, "Zadania");
+            put(1, "Menu edycji");
+            put(2, "Menu sprawdzania");
         }};
 
         List<File> folderList = new ArrayList<>() {{
             add(new File("./src/Zadania"));
             add(new File("./src/Studenci"));
         }};
-
         load(folderList);
+
         enum CommandKey {
-            STOP,
-            EDITMODE,
-            ADD,
-            BACK,
-            EDIT
+            stop, editmode, checkmode, add, back, edit, show, addStudent
         }
         Map<CommandKey, Command> commandMapMain = new HashMap<>() {{
-            put(CommandKey.STOP, new Command("stop", "Kończy cały program", -1 ));
-            put(CommandKey.EDITMODE, new Command("edit", "Moduł edycji", 10));
+            put(CommandKey.stop, new Command("stop", "Kończy cały program", -1 ));
+            put(CommandKey.editmode, new Command("editmode", "Wejdż do modułu edycji", 1));
+            put(CommandKey.checkmode, new Command("checkmode", "Wejdź do modułu sprawdzania", 2));
         }};
 
         Map<CommandKey, Command> commandMapEdit = new HashMap<>() {{
-            put(CommandKey.ADD, new Command("add", "Dodaje nowe zadanie", 10, edtoryInterface.runEditor()));
-            put(CommandKey.EDIT, new Command("edit", "edytuje", 10));
-            put(CommandKey.BACK, new Command("backToMain", "Powrót do maina", 0));
+            put(CommandKey.stop, new Command("stop", "Kończy cały program", -1 ));
+            put(CommandKey.add, new Command("add", "Dodaje nowe zadanie", 1, () -> directoryMethods.creator(editoryInterface.runEditor(),true).run()));
+            put(CommandKey.edit, new Command("edit", "edytuje", 1, () -> directoryMethods.creator(editoryInterface.runEditor(),false).run()));
+            put(CommandKey.back, new Command("backToMain", "Powrót do maina", 0));
+        }};
+        Map<CommandKey, Command> commandMapCheck = new HashMap<>() {{
+            put(CommandKey.stop, new Command("stop", "Kończy cały program", -1 ));
+            put(CommandKey.add, new Command("add", "Dodaje nowe rozwiązanie(studenta)", 2));
+            put(CommandKey.addStudent, new Command("addStudent", "Dodaje nowego studenta do systemu", 2, directoryMethods.createStudent()));
+            put(CommandKey.back, new Command("backToMain", "Powrót do maina", 0));
         }};
 
         Map<Integer, Map<CommandKey, Command>> commandMap = new HashMap<>(){{
             put(0, commandMapMain);
-            put(10, commandMapEdit);
+            put(1, commandMapEdit);
+            put(2, commandMapCheck);
         }};
 
         do {
@@ -72,7 +75,7 @@ public class s31774P01 implements directoryMethods, edtoryInterface{
 
     public static void load(List<File> files) {
         for (File folder : files) {
-            directoryMethods.createDirectory(folder);
+            directoryMethods.createFolder(folder);
         }
     }
 }
@@ -139,33 +142,34 @@ class Command {
         return " - " + commandDescription + " [ StatusCode: " + StatusCode + " ]";
     }
 }
-interface edtoryInterface {
-    static Runnable runEditor() {
-        return () -> {
+interface editoryInterface {
+    static String runEditor() {
             Scanner scanner = new Scanner(System.in);
             String zadanieTresc = "";
 
             while (true){
                 System.out.print("> ");
                 String input = scanner.nextLine();
-                if (input.equals(">exit")) {
-                    System.out.println("Utworz oraz zapisz? [Y/N]: ");
-                    if(input.equals("Y")){
-                        //TUTAJ ROBIMY ZAPUIS
-                        break;
-                    } else {
-                        break;
-                    }
+                if (input.equals("/exit")) {
+                    break;
                 }
                 zadanieTresc += input;
                 zadanieTresc += "\n";
             }
-            System.out.println(zadanieTresc);
-        };
+            return zadanieTresc;
     }
 }
 interface directoryMethods{
-    static File createDirectory(File folder){
+    Scanner scanner = new Scanner(System.in);
+    static Runnable createStudent(){
+        return () -> {
+            System.out.print("Podaj Imie_Nazwisko_Numer Studenta: ");
+            String nazwaStudenta = scanner.nextLine();
+            File folderStudenta = new File("./src/Studenci", nazwaStudenta);
+            createFolder(folderStudenta);
+        };
+    }
+    static File createFolder(File folder){
         if (!folder.exists()) {
             boolean created = folder.mkdirs();
             if (created) {
@@ -179,8 +183,22 @@ interface directoryMethods{
 
         return folder;
     }
-    static void creator(String name){
-        File nowyKatalogZadania = createDirectory(new File("./src/Zadania/" + name));
-
+    static Runnable creator(String zadanieTresc, boolean code) {
+        return () -> {
+            System.out.print("Podaj nazwe Zadania: ");
+            String nazwaZadania = scanner.nextLine();
+            try {
+                FileWriter fin = new FileWriter("./src/Zadania/" + nazwaZadania + ".txt");
+                fin.write(zadanieTresc);
+                fin.close();
+                if (code){
+                System.out.println("Task created successfully!");
+                } else {
+                    System.out.println("Task updated successfully!");
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        };
     }
 }
